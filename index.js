@@ -9,6 +9,10 @@ app.use(cors());
 
 connectDB();
 
+const authRoute = require("./routes/authRoute");
+
+app.use("/api", authRoute);
+
 //test
 app.get("/api/", (req, res) => {
   res.status(200).json({ message: "Wecome to the Server" });
