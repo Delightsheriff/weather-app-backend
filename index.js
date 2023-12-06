@@ -15,7 +15,7 @@ app.use("/api", authRoute);
 
 //test
 app.get("/api/", (req, res) => {
-  res.status(200).json({ message: "Wecome to the Server" });
+  res.status(200).json({ message: "Welcome to the Server" });
 });
 //server listening
 const PORT = process.env.PORT || 5000;
