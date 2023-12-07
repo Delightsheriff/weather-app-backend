@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { User, AuthToken } = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const createTokens = require("./createTokens");
 
 //newUser
 const registerUser = async (req, res) => {
@@ -34,79 +35,49 @@ const registerUser = async (req, res) => {
 };
 
 //existingUser
+// A function to sign in a user using bcrypt and jwt
 const signInUser = async (req, res) => {
   try {
+    // Get the email and password from the request body
     const { email, password } = req.body;
+
+    // Find the user by email using async and await
     const user = await User.findOne({ email });
 
+    // If the user is not found, return a 401 error
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
+    // Compare the password with the hashed password using async and await
     const passwordValid = await bcrypt.compare(password, user.password);
 
+    // If the password is not valid, return a 401 error
     if (!passwordValid) {
       return res.status(401).json({ message: "Invalid Email & Password" });
     }
 
-    // Generate tokens
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION,
-    });
-    let refreshToken = await AuthToken.createToken(user);
-    // console.log("Refresh token:", refreshToken);
+    // Generate tokens using the createTokens function
+    const payload = {
+      id: user._id,
+    };
+    const tokens = await createTokens(payload);
 
-    // Return success response
+    // Save the refresh token to the user document
+    user.refreshToken = tokens.refreshToken;
+    await user.save();
+
+    // Return a success response with the user and the tokens
     return res.status(200).json({
       message: "Login successful",
       user: { ...user._doc, password: "" },
-      accessToken: token,
-      refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
+    // Handle any errors and return a 500 error
     return res.status(500).json({ message: error.message });
   }
 };
 
-//refreshToken
-const refreshToken = async (req, res) => {
-  const { refreshToken: requestToken } = req.body;
-  if (requestToken == null) {
-    return res.status(401).json({ message: "Refresh Token is required!" });
-  }
-
-  try {
-    const existingToken = await AuthToken.findOne({ token: requestToken });
-
-    if (!existingToken) {
-      return res.status(401).json({ message: "Invalid refresh token" });
-    }
-
-    if (AuthToken.verifyExpiration(existingToken)) {
-      await AuthToken.deleteOne({ _id: existingToken._id });
-      return res.status(401).json({
-        message: "Refresh token was expired. Please make a new sign-in request",
-      });
-    }
-
-    const user = await User.findById(existingToken.user);
-
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION,
-    });
-
-    return res.status(200).json({
-      accessToken: newAccessToken,
-      refreshToken: existingToken.token,
-    });
-  } catch (err) {
-    console.error("Error refreshing token:", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-module.exports = { registerUser, signInUser, refreshToken };
+module.exports = { registerUser, signInUser };
