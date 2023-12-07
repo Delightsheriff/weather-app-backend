@@ -80,4 +80,51 @@ const signInUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, signInUser };
+// A function to refresh the access token using the refresh token
+const refreshToken = async (req, res) => {
+  // try {
+  // Get the refresh token from the request body
+  const { refreshToken } = req.body;
+
+  // If there is no refresh token, return a 400 error
+  if (!refreshToken) {
+    return res.status(400).json({ message: "Refresh token is required" });
+  }
+
+  // Verify the refresh token with the secret key
+  const payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
+
+  // Find the user by id using mongoose
+  const user = await User.findById(payload.id);
+
+  // If the user is not found, return a 404 error
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  // If the refresh token does not match the user's refresh token, return a 401 error
+  if (refreshToken !== user.refreshToken) {
+    return res
+      .status(401)
+      .json({ message: "Refresh token is invalid or expired" });
+  }
+
+  // Generate new tokens using the createTokens function
+  const tokens = await createTokens(payload);
+  console.log(tokens);
+
+  // Save the new refresh token to the user document using mongoose
+  user.refreshToken = tokens.refreshToken;
+  await user.save();
+
+  // Return a success response with the new access token
+  return res
+    .status(200)
+    .json({ message: "Token refreshed", accessToken: tokens.accessToken });
+  // } catch (error) {
+  //   // If there is an error, return a 500 error
+  //   return res.status(500).json({ message: error.message });
+  // }
+};
+
+module.exports = { registerUser, signInUser, refreshToken };
