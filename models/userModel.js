@@ -23,8 +23,4 @@ const userSchema = new mongoose.Schema(
 );
 const User = mongoose.model("Users", userSchema);
 
-const AuthToken = mongoose.model("AuthToken", authTokenSchema);
-
-// module.exports = AuthToken;
-
-module.exports = { User, AuthToken };
+module.exports = { User };

@@ -1,10 +1,6 @@
 const express = require("express");
 
-const {
-  registerUser,
-  signInUser,
-  refreshToken,
-} = require("../controller/authUserCtrl");
+const { registerUser, signInUser } = require("../controller/authUserCtrl");
 const {
   validateRegisterUser,
   validateSignInUser,
@@ -17,8 +13,5 @@ router.post("/sign-up", validateRegisterUser, registerUser);
 
 // Signin route
 router.post("/sign-in", validateSignInUser, signInUser);
-
-// Refresh token route
-router.post("/refresh-token", refreshToken);
 
 module.exports = router;
